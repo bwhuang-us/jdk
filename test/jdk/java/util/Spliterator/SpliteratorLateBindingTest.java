@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,12 +48,15 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import jdk.test.lib.valueclass.VClass;
+
 import static org.testng.Assert.assertEquals;
 
 /**
  * @test
  * @bug 8148748 8170155 8336672
  * @summary Spliterator last-binding tests
+ * @library /test/lib
  * @run testng SpliteratorLateBindingTest
  */
 
@@ -112,6 +115,8 @@ public class SpliteratorLateBindingTest extends SpliteratorLateBindingFailFastHe
         // @@@  Descending maps etc
         db.addMap(TreeMap::new);
 
+        addVClassSources(data);
+
         // BitSet
 
         // BUG: Assumes identity in WeakHashMap
@@ -155,6 +160,47 @@ public class SpliteratorLateBindingTest extends SpliteratorLateBindingFailFastHe
                () -> new IntSource<>(CharBuffer.wrap("ABCD"), pointsSource, bs -> bs.limit(3), true));
 
         return spliteratorDataProvider = data.toArray(new Object[0][]);
+    }
+
+    private static void addVClassSources(List<Object[]> data) {
+        SpliteratorDataBuilder<VClass> db =
+                new SpliteratorDataBuilder<>(data, new VClass(5),
+                        Arrays.asList(new VClass(1), new VClass(2), new VClass(3), new VClass(4)));
+
+        // Collections
+
+        db.addList(ArrayList::new);
+
+        db.addList(LinkedList::new);
+
+        db.addList(Vector::new);
+
+        db.addList(AbstractRandomAccessListImpl::new);
+
+        db.addCollection(HashSet::new);
+
+        db.addCollection(LinkedHashSet::new);
+
+        db.addCollection(TreeSet::new);
+
+        db.addCollection(c -> {
+            Stack<VClass> s = new Stack<>();
+            s.addAll(c);
+            return s;
+        });
+
+        db.addCollection(PriorityQueue::new);
+
+        db.addCollection(ArrayDeque::new);
+
+        // Maps
+
+        db.addMap(HashMap::new);
+
+        db.addMap(LinkedHashMap::new);
+
+        // @@@  Descending maps etc
+        db.addMap(TreeMap::new);
     }
 
 

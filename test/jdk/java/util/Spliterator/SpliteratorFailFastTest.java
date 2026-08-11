@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,8 @@ import java.util.Vector;
 import java.util.WeakHashMap;
 import java.util.function.Supplier;
 
+import jdk.test.lib.valueclass.VClass;
+
 import org.testng.Assert.ThrowingRunnable;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -49,6 +51,7 @@ import static org.testng.Assert.assertThrows;
  * @test
  * @bug 8148748 8336672
  * @summary Spliterator fail-fast tests
+ * @library /test/lib
  * @run testng SpliteratorFailFastTest
  */
 
@@ -112,7 +115,48 @@ public class SpliteratorFailFastTest extends SpliteratorLateBindingFailFastHelpe
         // @@@  Descending maps etc
         db.addMap(TreeMap::new);
 
+        addVClassSources(data);
+
         return spliteratorDataProvider = data.toArray(new Object[0][]);
+    }
+
+    private static void addVClassSources(List<Object[]> data) {
+        SpliteratorDataBuilder<VClass> db =
+                new SpliteratorDataBuilder<>(data, new VClass(5),
+                        Arrays.asList(new VClass(1), new VClass(2), new VClass(3), new VClass(4)));
+
+        // Collections
+
+        db.addList(ArrayList::new);
+
+        db.addList(LinkedList::new);
+
+        db.addList(Vector::new);
+
+        db.addList(AbstractRandomAccessListImpl::new);
+
+        db.addCollection(HashSet::new);
+
+        db.addCollection(LinkedHashSet::new);
+
+        db.addCollection(TreeSet::new);
+
+        db.addCollection(c -> {
+            Stack<VClass> s = new Stack<>();
+            s.addAll(c);
+            return s;
+        });
+
+        db.addCollection(PriorityQueue::new);
+
+        // Maps
+
+        db.addMap(HashMap::new);
+
+        db.addMap(LinkedHashMap::new);
+
+        // @@@  Descending maps etc
+        db.addMap(TreeMap::new);
     }
 
     @Test(dataProvider = "Source")

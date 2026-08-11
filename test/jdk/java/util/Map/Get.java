@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 /*
  * @test
  * @bug 6306829 8336669
+ * @library /test/lib
  * @summary Verify assertions in get() javadocs
  * @author Martin Buchholz
  */
@@ -40,6 +41,8 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import jdk.test.lib.valueclass.VClass;
 
 public class Get {
 
@@ -60,6 +63,12 @@ public class Get {
         testMap(new WeakHashMap<Char,Boolean>());
         testMap(new TreeMap<Char,Boolean>());
         testMap(new ConcurrentSkipListMap<Char,Boolean>());
+        testVClassMap(new Hashtable<>());
+        testVClassMap(new HashMap<>());
+        testVClassMap(new LinkedHashMap<>());
+        testVClassMap(new ConcurrentHashMap<>());
+        testVClassMap(new TreeMap<>());
+        testVClassMap(new ConcurrentSkipListMap<>());
     }
 
     private static void put(Map<Char,Boolean> m,
@@ -125,6 +134,39 @@ public class Get {
             catch (NullPointerException e) {}
             catch (Throwable t) { unexpected(m.getClass().getName(), t); }
         }
+    }
+
+    private static void putVClass(Map<VClass,VClass> m,
+                                  VClass key, VClass value,
+                                  VClass oldValue) {
+        if (oldValue != null) {
+            check("containsValue(oldValue)", m.containsValue(oldValue));
+            check("values.contains(oldValue)", m.values().contains(oldValue));
+        }
+        equal(m.put(key, value), oldValue);
+        equal(m.get(key), value);
+        check("containsKey", m.containsKey(key));
+        check("keySet.contains", m.keySet().contains(key));
+        check("containsValue", m.containsValue(value));
+        check("values.contains",  m.values().contains(value));
+        check("!isEmpty", ! m.isEmpty());
+    }
+
+    private static void testVClassMap(Map<VClass,VClass> m) {
+        System.err.println(m.getClass() + " with VClass");
+        VClass aKey = new VClass(1);
+        VClass bKey = new VClass(2);
+        VClass cKey = new VClass(3);
+        VClass trueValue = new VClass(101);
+        VClass falseValue = new VClass(102);
+        VClass otherValue = new VClass(103);
+
+        putVClass(m, aKey, trueValue, null);
+        putVClass(m, aKey, falseValue, trueValue);
+        putVClass(m, bKey, trueValue, null);
+        putVClass(m, new VClass(1), otherValue, falseValue);
+        putVClass(m, cKey, trueValue, null);
+        putVClass(m, cKey, otherValue, trueValue);
     }
 
     //--------------------- Infrastructure ---------------------------

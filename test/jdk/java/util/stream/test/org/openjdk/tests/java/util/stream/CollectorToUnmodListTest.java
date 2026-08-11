@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,5 +48,18 @@ public class CollectorToUnmodListTest {
         };
         var finisher = (Function<List<String>, List<String>>)Collectors.<String>toUnmodifiableList().finisher();
         assertThrows(IllegalArgumentException.class, () -> finisher.apply(in));
-  }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testIntegerFinisher() {
+        Integer[] array = { 1, 2, 3 };
+        List<Integer> in = new ArrayList<>() {
+            public Object[] toArray() {
+                return array;
+            }
+        };
+        var finisher = (Function<List<Integer>, List<Integer>>)Collectors.<Integer>toUnmodifiableList().finisher();
+        assertThrows(IllegalArgumentException.class, () -> finisher.apply(in));
+    }
 }

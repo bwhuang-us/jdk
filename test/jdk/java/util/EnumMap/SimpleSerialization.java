@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,10 @@
  * @bug 6312706
  * @summary A serialized EnumMap can be successfully de-serialized.
  * @author Neil Richards <neil.richards@ngmr.net>, <neil_richards@uk.ibm.com>
+ * @library /test/lib
  */
 
+import jdk.test.lib.valueclass.VClass;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -65,6 +67,26 @@ public class SimpleSerialization {
 
         if (false == enumMap.equals(deserializedObject)) {
             throw new RuntimeException(getFailureText(enumMap, deserializedObject));
+        }
+
+        final EnumMap<TestEnum, VClass> valueMap = new EnumMap<>(TestEnum.class);
+        valueMap.put(TestEnum.e01, new VClass(1));
+        valueMap.put(TestEnum.e04, new VClass(4));
+        valueMap.put(TestEnum.e05, new VClass(5));
+        Object valueCopy = deserialize(valueMap);
+        if (!valueMap.equals(valueCopy)) {
+            throw new RuntimeException(getFailureText(valueMap, valueCopy));
+        }
+    }
+
+    private static Object deserialize(Object object) throws IOException, ClassNotFoundException {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(object);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(
+                new ByteArrayInputStream(baos.toByteArray()))) {
+            return ois.readObject();
         }
     }
 

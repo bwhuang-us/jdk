@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,10 @@
  * @bug 6312706
  * @summary Iterator.remove() from Map.entrySet().iterator() invalidates returned Entry.
  * @author Neil Richards <neil.richards@ngmr.net>, <neil_richards@uk.ibm.com>
+ * @library /test/lib
  */
 
+import jdk.test.lib.valueclass.VClass;
 import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -55,6 +57,18 @@ public class EntrySetIteratorRemoveInvalidatesEntry {
         try {
             entry.getKey();
             throw new RuntimeException("Test FAILED: Entry not invalidated by removal.");
+        } catch (Exception e) { }
+
+        final EnumMap<TestEnum, VClass> valueMap = new EnumMap<>(TestEnum.class);
+        for (TestEnum e : TestEnum.values()) {
+            valueMap.put(e, new VClass(e.ordinal()));
+        }
+        Iterator<Map.Entry<TestEnum, VClass>> valueIterator = valueMap.entrySet().iterator();
+        Map.Entry<TestEnum, VClass> valueEntry = valueIterator.next();
+        valueIterator.remove();
+        try {
+            valueEntry.getKey();
+            throw new RuntimeException("Test FAILED: VClass entry not invalidated by removal.");
         } catch (Exception e) { }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,11 @@
 /*
  * @test
  * @bug 8050818
+ * @library /test/lib
  * @run testng PredicateNotTest
  */
 
+import jdk.test.lib.valueclass.VClass;
 import java.util.List;
 import java.util.function.Predicate;
 import org.testng.annotations.Test;
@@ -63,6 +65,11 @@ public class PredicateNotTest {
         assertEquals(test.stream().filter(not(not(not(String::isEmpty)))).collect(joining("\n")), expected);
         assertEquals(test.stream().filter(not(not(not(s -> s.isEmpty())))).collect(joining("\n")), expected);
         assertEquals(test.stream().filter(not(not(not(new IsEmptyPredicate())))).collect(joining("\n")), expected);
+
+        List<VClass> values = List.of(new VClass(1), new VClass(0),
+                                      new VClass(2), new VClass(0));
+        List<VClass> expectedValues = List.of(new VClass(1), new VClass(2));
+        assertEquals(values.stream().filter(not(v -> v.x == 0)).toList(), expectedValues);
+        assertEquals(values.stream().filter(not(not(not(v -> v.x == 0)))).toList(), expectedValues);
     }
 }
-

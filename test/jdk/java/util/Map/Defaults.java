@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,13 @@
 /*
  * @test
  * @bug 8010122 8004518 8024331 8024688
+ * @library /test/lib
  * @summary Test Map default methods
  * @author Mike Duigou
  * @run testng Defaults
  */
 
+import jdk.test.lib.valueclass.VClass;
 import org.testng.Assert.ThrowingRunnable;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -531,6 +533,56 @@ public class Defaults {
         assertThrowsNPE(() -> map.merge(KEYS[1], VALUES[1], null));
     }
 
+    @Test(dataProvider = "Map<VClass,VClass> rw=true keys=nonNull values=nonNull")
+    public void testVClassDefaultMethods(String description, Map<VClass, VClass> map) {
+        VClass firstKey = new VClass(1);
+        VClass firstValue = new VClass(101);
+        VClass secondKey = new VClass(2);
+        VClass secondValue = new VClass(102);
+        VClass extraKey = new VClass(3);
+        VClass extraValue = new VClass(103);
+        VClass replacementValue = new VClass(104);
+        VClass mergeValue = new VClass(105);
+
+        map.put(firstKey, firstValue);
+        map.put(secondKey, secondValue);
+
+        assertEquals(map.getOrDefault(firstKey, extraValue), firstValue, description);
+        assertEquals(map.getOrDefault(extraKey, extraValue), extraValue, description);
+
+        assertNull(map.putIfAbsent(extraKey, extraValue));
+        assertEquals(map.get(extraKey), extraValue, description);
+        assertEquals(map.putIfAbsent(extraKey, replacementValue), extraValue, description);
+        assertEquals(map.get(extraKey), extraValue, description);
+
+        assertEquals(map.replace(firstKey, replacementValue), firstValue, description);
+        assertEquals(map.get(firstKey), replacementValue, description);
+        assertTrue(map.replace(firstKey, replacementValue, firstValue), description);
+        assertEquals(map.get(firstKey), firstValue, description);
+
+        assertEquals(map.compute(firstKey, (k, v) -> {
+            assertEquals(k, firstKey, description);
+            assertEquals(v, firstValue, description);
+            return replacementValue;
+        }), replacementValue, description);
+        assertEquals(map.get(firstKey), replacementValue, description);
+
+        assertEquals(map.computeIfAbsent(new VClass(4), k -> new VClass(k.x + 100)), new VClass(104), description);
+        assertEquals(map.computeIfPresent(secondKey, (k, v) -> {
+            assertEquals(k, secondKey, description);
+            assertEquals(v, secondValue, description);
+            return replacementValue;
+        }), replacementValue, description);
+        assertEquals(map.get(secondKey), replacementValue, description);
+
+        assertEquals(map.merge(secondKey, mergeValue, (oldValue, newValue) -> {
+            assertEquals(oldValue, replacementValue, description);
+            assertEquals(newValue, mergeValue, description);
+            return firstValue;
+        }), firstValue, description);
+        assertEquals(map.get(secondKey), firstValue, description);
+    }
+
     /** A function that flipflops between running two other functions. */
     static <T,U,V> BiFunction<T,U,V> twoStep(AtomicBoolean b,
                                              BiFunction<T,U,V> first,
@@ -783,6 +835,26 @@ public class Defaults {
     @DataProvider(name = "Map<IntegerEnum,String> rw=true keys=withNull values=withNull", parallel = true)
     public static Iterator<Object[]> rwNullsMapProvider() {
         return makeAllRWMapsWithNulls().iterator();
+    }
+
+    @DataProvider(name = "Map<VClass,VClass> rw=true keys=nonNull values=nonNull", parallel = true)
+    public static Iterator<Object[]> rwVClassMapProvider() {
+        return Arrays.asList(
+            new Object[]{"HashMap", makeVClassMap(HashMap::new)},
+            new Object[]{"IdentityHashMap", makeVClassMap(IdentityHashMap::new)},
+            new Object[]{"LinkedHashMap", makeVClassMap(LinkedHashMap::new)},
+            new Object[]{"TreeMap", makeVClassMap(TreeMap::new)},
+            new Object[]{"ConcurrentHashMap", makeVClassMap(ConcurrentHashMap::new)},
+            new Object[]{"ConcurrentSkipListMap", makeVClassMap(ConcurrentSkipListMap::new)},
+            new Object[]{"ExtendsAbstractMap", makeVClassMap(ExtendsAbstractMap::new)}
+        ).iterator();
+    }
+
+    private static Map<VClass, VClass> makeVClassMap(Supplier<Map<VClass, VClass>> supplier) {
+        Map<VClass, VClass> result = supplier.get();
+        result.put(new VClass(1), new VClass(101));
+        result.put(new VClass(2), new VClass(102));
+        return result;
     }
 
     private static Collection<Object[]> makeAllRWMapsWithNulls() {

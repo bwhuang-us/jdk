@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,11 @@
  * @test
  * @bug 8356995
  * @summary Comparator min/max method tests
+ * @library /test/lib
  * @run junit MinMaxTest
  */
 
+import jdk.test.lib.valueclass.VClass;
 import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
@@ -47,6 +49,17 @@ public class MinMaxTest {
     Comparator<String> c = Comparator.naturalOrder();
     assertEquals("b", c.max("a", "b"));
     assertEquals("b", c.max("b", "a"));
+  }
+
+  @Test
+  void testValueClassMinMax() {
+    Comparator<VClass> c = Comparator.naturalOrder();
+    VClass smaller = new VClass(1);
+    VClass larger = new VClass(2);
+    assertEquals(smaller, c.min(smaller, larger));
+    assertEquals(smaller, c.min(larger, smaller));
+    assertEquals(larger, c.max(smaller, larger));
+    assertEquals(larger, c.max(larger, smaller));
   }
 
   @Test

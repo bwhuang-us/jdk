@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 /*
  * @test
  * @bug 8011200
+ * @library /test/lib
  * @run testng BasicSerialization
  * @summary Ensure Maps can be serialized and deserialized.
  * @author Mike Duigou
@@ -40,6 +41,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import jdk.test.lib.valueclass.VClass;
 import org.testng.annotations.Test;
 import org.testng.annotations.DataProvider;
 import static org.testng.Assert.fail;
@@ -154,6 +156,38 @@ public class BasicSerialization {
         assertEquals(clone, serialClone, description + ": clone should equal deserialized clone");
     }
 
+    @Test(dataProvider = "Map<VClass,VClass>")
+    public void testVClassSerialization(String description, Map<VClass, VClass> map) {
+        Map<VClass, VClass> clone = mapClone(map);
+        Map<VClass, VClass> serialClone = serialClone(map);
+
+        assertEquals(map, map, description + ": should equal self");
+        assertEquals(clone, map, description + ": should equal clone");
+        assertEquals(map, clone, description + ": should equal original map");
+        assertEquals(serialClone, map, description + ": should equal deserialized clone");
+        assertEquals(map, serialClone, description + ": should equal original map");
+        assertEquals(serialClone, clone, description + ": deserialized clone should equal clone");
+        assertEquals(clone, serialClone, description + ": clone should equal deserialized clone");
+
+        VClass extraKey = new VClass(TEST_SIZE);
+        VClass extraValue = new VClass(TEST_SIZE + 1);
+        assertFalse(map.containsKey(extraKey), description + ": unexpected key");
+        assertFalse(clone.containsKey(extraKey), description + ": unexpected key");
+        assertFalse(serialClone.containsKey(extraKey), description + ": unexpected key");
+        map.put(extraKey, extraValue);
+        clone.put(extraKey, extraValue);
+        serialClone.put(extraKey, extraValue);
+        assertTrue(map.containsKey(extraKey), description + ": missing key");
+        assertTrue(clone.containsKey(extraKey), description + ": missing key");
+        assertTrue(serialClone.containsKey(extraKey), description + ": missing key");
+        assertEquals(map.get(extraKey), extraValue, description + ": wrong value");
+        assertEquals(clone.get(extraKey), extraValue, description + ": wrong value");
+        assertEquals(serialClone.get(extraKey), extraValue, description + ": wrong value");
+
+        assertEquals(map, clone, description + ": should equal clone");
+        assertEquals(serialClone, clone, description + ": deserialized clone should equal clone");
+    }
+
     static byte[] serializedForm(Object obj) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -209,6 +243,26 @@ public class BasicSerialization {
             new Object[]{"ConcurrentSkipListMap", fillMap(new ConcurrentSkipListMap())},
             new Object[]{"Collections.checkedMap(ConcurrentHashMap)", Collections.checkedMap(fillMap(new ConcurrentHashMap()), IntegerEnum.class, String.class)},
             new Object[]{"Collections.synchronizedMap(EnumMap)", Collections.synchronizedMap(fillMap(new EnumMap(IntegerEnum.class)))}).iterator();
+    }
+
+    @DataProvider(name = "Map<VClass,VClass>", parallel = true)
+    private static Iterator<Object[]> makeVClassMaps() {
+        return Arrays.asList(
+            new Object[]{"HashMap", fillVClassMap(new HashMap<>())},
+            new Object[]{"LinkedHashMap", fillVClassMap(new LinkedHashMap<>())},
+            new Object[]{"TreeMap", fillVClassMap(new TreeMap<>())},
+            new Object[]{"ConcurrentHashMap", fillVClassMap(new ConcurrentHashMap<>())},
+            new Object[]{"ConcurrentSkipListMap", fillVClassMap(new ConcurrentSkipListMap<>())},
+            new Object[]{"Collections.synchronizedMap(HashMap)",
+                    Collections.synchronizedMap(fillVClassMap(new HashMap<>()))}).iterator();
+    }
+
+    private static Map<VClass, VClass> fillVClassMap(Map<VClass, VClass> result) {
+        for (int i = 0; i < TEST_SIZE; i++) {
+            result.put(new VClass(i), new VClass(i));
+        }
+
+        return result;
     }
 
     private static Map<IntegerEnum, String> fillMap(Map<IntegerEnum, String> result) {

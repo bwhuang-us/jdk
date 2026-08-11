@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,10 @@
  * @bug 6312706
  * @summary Sets from Map.entrySet() return distinct objects for each Entry
  * @author Neil Richards <neil.richards@ngmr.net>, <neil_richards@uk.ibm.com>
+ * @library /test/lib
  */
 
+import jdk.test.lib.valueclass.VClass;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,6 +57,16 @@ public class DistinctEntrySetElements {
         }
         if (hashSet.hashCode() != entrySet.hashCode()) {
             throw new RuntimeException("Test FAILED: Set's hashcodes are not equal.");
+        }
+
+        final EnumMap<TestEnum, VClass> valueMap = new EnumMap<>(TestEnum.class);
+        for (TestEnum e : TestEnum.values()) {
+            valueMap.put(e, new VClass(e.ordinal()));
+        }
+        Set<Map.Entry<TestEnum, VClass>> valueEntrySet = valueMap.entrySet();
+        HashSet<Map.Entry<TestEnum, VClass>> valueHashSet = new HashSet<>(valueEntrySet);
+        if (!valueHashSet.equals(valueEntrySet) || valueHashSet.hashCode() != valueEntrySet.hashCode()) {
+            throw new RuntimeException("Test FAILED: VClass entry sets differ.");
         }
     }
 }

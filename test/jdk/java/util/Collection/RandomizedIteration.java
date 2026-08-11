@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
@@ -88,6 +89,18 @@ public class RandomizedIteration {
             map.keySet()
                .forEach(mapOut::println);
         }
+
+        try (PrintStream setOut = new PrintStream("int-set." + suffix)) {
+            Set.copyOf(IntStream.range(0, WORDS.length).boxed().toList())
+               .forEach(setOut::println);
+        }
+
+        try (PrintStream mapOut = new PrintStream("int-map." + suffix)) {
+            var map = Map.copyOf(IntStream.range(0, WORDS.length).boxed()
+                                     .collect(toUnmodifiableMap(i -> i, i -> i)));
+            map.keySet()
+               .forEach(mapOut::println);
+        }
     }
 
     /**
@@ -123,7 +136,10 @@ public class RandomizedIteration {
             System.out.println("Verifying " + count + " files.");
             Set<Integer> setHashes = readFiles("set.", count);
             Set<Integer> mapHashes = readFiles("map.", count);
-            if (setHashes.size() > 1 && mapHashes.size() > 1) {
+            Set<Integer> intSetHashes = readFiles("int-set.", count);
+            Set<Integer> intMapHashes = readFiles("int-map.", count);
+            if (setHashes.size() > 1 && mapHashes.size() > 1
+                    && intSetHashes.size() > 1 && intMapHashes.size() > 1) {
                 System.out.println("Passed: differing iteration orders were detected.");
             } else {
                 throw new AssertionError("FAILED: iteration order not randomized!");

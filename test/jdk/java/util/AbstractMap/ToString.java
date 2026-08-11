@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,7 @@ import java.util.Map;
 
 public class ToString {
     public static void main(String[] args) {
-        Map m = new LyingMap();
+        Map<String,String> m = new LyingMap<>();
         if (!m.toString().equals("{}"))
             throw new RuntimeException(m.toString() + "!= {}");
 
@@ -45,10 +45,22 @@ public class ToString {
         m.put("y", "2");
         if (!m.toString().equals("{x=1, y=2}"))
             throw new RuntimeException(m.toString() + "!= {x=1, y=2}");
+
+        Map<Integer,Integer> vm = new LyingMap<>();
+        if (!vm.toString().equals("{}"))
+            throw new RuntimeException(vm.toString() + "!= {}");
+
+        vm.put(1, 1);
+        if (!vm.toString().equals("{1=1}"))
+            throw new RuntimeException(vm.toString() + "!= {1=1}");
+
+        vm.put(2, 2);
+        if (!vm.toString().equals("{1=1, 2=2}"))
+            throw new RuntimeException(vm.toString() + "!= {1=1, 2=2}");
     }
 }
 
-class LyingMap extends LinkedHashMap {
+class LyingMap<K,V> extends LinkedHashMap<K,V> {
     public int size() {
         return super.size() + 1; // Lies, lies, all lies!
     }

@@ -26,6 +26,7 @@
  * @bug     6207984 6268068
  * @summary Test contains/remove equator compatibility
  * @author  Martin Buchholz
+ * @library /test/lib
  */
 
 import java.util.ArrayDeque;
@@ -39,6 +40,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.PriorityBlockingQueue;
+
+import jdk.test.lib.valueclass.VClass;
 
 public class RemoveContains {
     static volatile int passed = 0, failed = 0;
@@ -82,6 +85,15 @@ public class RemoveContains {
         test(new LinkedTransferQueue<String>());
         test(new ArrayDeque<String>(10));
 
+        testValue(new PriorityQueue<VClass>(Comparator.comparingInt(x -> x.x / 10)));
+        testValue(new PriorityQueue<VClass>(10, Comparator.comparingInt(x -> x.x / 10)));
+        testValue(new PriorityBlockingQueue<VClass>(10, Comparator.comparingInt(x -> x.x / 10)));
+        testValue(new ArrayBlockingQueue<VClass>(10));
+        testValue(new LinkedBlockingQueue<VClass>(10));
+        testValue(new LinkedBlockingDeque<VClass>(10));
+        testValue(new LinkedTransferQueue<VClass>());
+        testValue(new ArrayDeque<VClass>(10));
+
         System.out.printf("%nPassed = %d, failed = %d%n%n", passed, failed);
         if (failed > 0) throw new Error("Some tests failed");
     }
@@ -102,6 +114,25 @@ public class RemoveContains {
 
             check(! q.remove("fi"));
             check(! q.remove("flurble"));
+
+        } catch (Throwable t) { unexpected(t); }
+    }
+
+    private static void testValue(Queue<VClass> q) {
+        try {
+            List<VClass> values =
+                Arrays.asList(new VClass(1), new VClass(2), new VClass(3), new VClass(4));
+            q.addAll(values);
+            for (VClass value : values)
+                check(q.contains(value));
+            check(! q.contains(new VClass(99)));
+
+            check(q.remove(new VClass(3)));
+            for (VClass value : values)
+                check(q.contains(value) ^ value.equals(new VClass(3)));
+
+            check(! q.remove(new VClass(3)));
+            check(! q.remove(new VClass(99)));
 
         } catch (Throwable t) { unexpected(t); }
     }

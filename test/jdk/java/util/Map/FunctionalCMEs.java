@@ -39,6 +39,7 @@ import org.testng.annotations.DataProvider;
  * @bug 8071667
  * @summary Ensure that ConcurrentModificationExceptions are thrown as specified from Map methods that accept Functions
  * @author bchristi
+ * @library /test/lib
  * @build Defaults
  * @run testng FunctionalCMEs
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,18 +24,20 @@
 /*
  * @test
  * @bug 8139233
+ * @library /test/lib
  * @summary ensure entry set's iterator doesn't have side effects on the entry set
  * @run testng EntrySetIterator
  */
 
 import java.util.*;
+import jdk.test.lib.valueclass.VClass;
 import org.testng.annotations.Test;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertEquals;
 
 public class EntrySetIterator {
     @Test
-    public void main() {
+    public void entrySetIterator() {
         Map<String, String> map = Map.of("a", "1", "b", "2", "c", "3");
         Set<Map.Entry<String, String>> entrySet = map.entrySet();
         Iterator<Map.Entry<String, String>> iterator = entrySet.iterator();
@@ -45,6 +47,24 @@ public class EntrySetIterator {
         // copying implicitly iterates an iterator
         Set<Map.Entry<String, String>> copy1 = new HashSet<>(entrySet);
         Set<Map.Entry<String, String>> copy2 = new HashSet<>(entrySet);
+
+        assertEquals(copy2, copy1);
+        assertTrue(iterator.hasNext());
+    }
+
+    @Test
+    public void vclassEntrySetIterator() {
+        Map<VClass, VClass> map = Map.of(
+                new VClass(1), new VClass(11),
+                new VClass(2), new VClass(22),
+                new VClass(3), new VClass(33));
+        Set<Map.Entry<VClass, VClass>> entrySet = map.entrySet();
+        Iterator<Map.Entry<VClass, VClass>> iterator = entrySet.iterator();
+
+        assertTrue(iterator.hasNext());
+
+        Set<Map.Entry<VClass, VClass>> copy1 = new HashSet<>(entrySet);
+        Set<Map.Entry<VClass, VClass>> copy2 = new HashSet<>(entrySet);
 
         assertEquals(copy2, copy1);
         assertTrue(iterator.hasNext());

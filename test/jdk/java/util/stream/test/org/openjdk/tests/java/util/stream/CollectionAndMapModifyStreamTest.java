@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,7 @@ import static org.testng.Assert.assertTrue;
 public class CollectionAndMapModifyStreamTest {
     // Well known Identity instances; needed for IdentityHashMap
     static List<String> CONTENT = IntStream.range(0, 10).mapToObj(i -> "BASE-" + i).toList();
+    static List<Integer> INTEGER_CONTENT = IntStream.range(0, 10).boxed().toList();
 
     @DataProvider(name = "collections")
     public Object[][] createCollections() {
@@ -102,9 +103,58 @@ public class CollectionAndMapModifyStreamTest {
 
     @Test(dataProvider = "collections")
     public void testCollectionSizeRemove(String name, Collection<String> c) {
-        assertTrue(c.remove(CONTENT.get(0)));
-        Stream<String> s = c.stream();
-        assertTrue(c.remove(CONTENT.get(1)));
+        testCollectionSizeRemove(c, CONTENT);
+    }
+
+    @DataProvider(name = "integerCollections")
+    public Object[][] createIntegerCollections() {
+        List<Collection<Integer>> collections = new ArrayList<>();
+        collections.add(new ArrayList<>(INTEGER_CONTENT));
+        collections.add(new LinkedList<>(INTEGER_CONTENT));
+        collections.add(new Vector<>(INTEGER_CONTENT));
+
+        collections.add(new HashSet<>(INTEGER_CONTENT));
+        collections.add(new LinkedHashSet<>(INTEGER_CONTENT));
+        collections.add(new TreeSet<>(INTEGER_CONTENT));
+
+        Stack<Integer> stack = new Stack<>();
+        stack.addAll(INTEGER_CONTENT);
+        collections.add(stack);
+        collections.add(new PriorityQueue<>(INTEGER_CONTENT));
+        collections.add(new ArrayDeque<>(INTEGER_CONTENT));
+
+        // Concurrent collections
+
+        collections.add(new ConcurrentSkipListSet<>(INTEGER_CONTENT));
+
+        ArrayBlockingQueue<Integer> arrayBlockingQueue = new ArrayBlockingQueue<>(INTEGER_CONTENT.size());
+        for (Integer i : INTEGER_CONTENT)
+            arrayBlockingQueue.add(i);
+        collections.add(arrayBlockingQueue);
+        collections.add(new PriorityBlockingQueue<>(INTEGER_CONTENT));
+        collections.add(new LinkedBlockingQueue<>(INTEGER_CONTENT));
+        collections.add(new LinkedTransferQueue<>(INTEGER_CONTENT));
+        collections.add(new ConcurrentLinkedQueue<>(INTEGER_CONTENT));
+        collections.add(new LinkedBlockingDeque<>(INTEGER_CONTENT));
+        collections.add(new ConcurrentLinkedDeque<>(INTEGER_CONTENT));
+
+        Object[][] params = new Object[collections.size()][];
+        for (int i = 0; i < collections.size(); i++) {
+            params[i] = new Object[]{collections.get(i).getClass().getName(), collections.get(i)};
+        }
+
+        return params;
+    }
+
+    @Test(dataProvider = "integerCollections")
+    public void testIntegerCollectionSizeRemove(String name, Collection<Integer> c) {
+        testCollectionSizeRemove(c, INTEGER_CONTENT);
+    }
+
+    private <T> void testCollectionSizeRemove(Collection<T> c, List<T> content) {
+        assertTrue(c.remove(content.get(0)));
+        Stream<T> s = c.stream();
+        assertTrue(c.remove(content.get(1)));
         Object[] result = s.toArray();
         assertEquals(result.length, c.size());
     }
@@ -153,7 +203,7 @@ public class CollectionAndMapModifyStreamTest {
 
     @Test(dataProvider = "maps", groups = { "serialization-hostile" })
     public void testMapValuesSizeRemove(String name, Supplier<Map<String, String>> c) {
-        testCollectionSizeRemove(name + " value set", c.get().values());
+        testCollectionSizeRemove(name + " values", c.get().values());
     }
 
     @Test(dataProvider = "maps")
@@ -161,11 +211,55 @@ public class CollectionAndMapModifyStreamTest {
         testEntrySetSizeRemove(name + " entry set", c.get().entrySet());
     }
 
-    private void testEntrySetSizeRemove(String name, Set<Map.Entry<String, String>> c) {
-        Map.Entry<String, String> first = c.iterator().next();
+    @DataProvider(name = "integerMaps")
+    public Object[][] createIntegerMaps() {
+        Map<Integer, Integer> content = new HashMap<>();
+        for (Integer v : INTEGER_CONTENT) {
+            content.put(v, v);
+        }
+
+        Map<String, Supplier<Map<Integer, Integer>>> maps = new HashMap<>();
+
+        maps.put(HashMap.class.getName(), () -> new HashMap<>(content));
+        maps.put(LinkedHashMap.class.getName(), () -> new LinkedHashMap<>(content));
+
+        maps.put(TreeMap.class.getName(), () -> new TreeMap<>(content));
+        maps.put(TreeMap.class.getName() + ".descendingMap()", () -> new TreeMap<>(content).descendingMap());
+
+        // Concurrent collections
+
+        maps.put(ConcurrentHashMap.class.getName(), () -> new ConcurrentHashMap<>(content));
+        maps.put(ConcurrentSkipListMap.class.getName(), () -> new ConcurrentSkipListMap<>(content));
+
+        Object[][] params = new Object[maps.size()][];
+        int i = 0;
+        for (Map.Entry<String, Supplier<Map<Integer, Integer>>> e : maps.entrySet()) {
+            params[i++] = new Object[]{e.getKey(), e.getValue()};
+        }
+
+        return params;
+    }
+
+    @Test(dataProvider = "integerMaps", groups = { "serialization-hostile" })
+    public void testIntegerMapKeysSizeRemove(String name, Supplier<Map<Integer, Integer>> c) {
+        testCollectionSizeRemove(c.get().keySet(), INTEGER_CONTENT);
+    }
+
+    @Test(dataProvider = "integerMaps", groups = { "serialization-hostile" })
+    public void testIntegerMapValuesSizeRemove(String name, Supplier<Map<Integer, Integer>> c) {
+        testCollectionSizeRemove(c.get().values(), INTEGER_CONTENT);
+    }
+
+    @Test(dataProvider = "integerMaps")
+    public void testIntegerMapEntriesSizeRemove(String name, Supplier<Map<Integer, Integer>> c) {
+        testEntrySetSizeRemove(name + " entry set", c.get().entrySet());
+    }
+
+    private <T> void testEntrySetSizeRemove(String name, Set<Map.Entry<T, T>> c) {
+        Map.Entry<T, T> first = c.iterator().next();
         assertTrue(c.remove(first));
-        Stream<Map.Entry<String, String>> s = c.stream();
-        Map.Entry<String, String> second = c.iterator().next();
+        Stream<Map.Entry<T, T>> s = c.stream();
+        Map.Entry<T, T> second = c.iterator().next();
         assertTrue(c.remove(second));
         Object[] result = s.toArray();
         assertEquals(result.length, c.size());

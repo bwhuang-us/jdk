@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,11 @@
 /*
  * @test
  * @bug 6797535 6889858 6891113 8013712 8011800 8014365 8280168
+ * @library /test/lib
  * @summary Basic tests for methods in java.util.Objects
  */
+
+import jdk.test.lib.valueclass.VClass;
 
 import java.util.*;
 import java.util.function.*;
@@ -45,6 +48,7 @@ public class BasicObjectsTest {
         errors += testIsNull();
         errors += testNonNull();
         errors += testNonNullOf();
+        errors += testVClassObjectsMethods();
         if (errors > 0 )
             throw new RuntimeException();
     }
@@ -304,6 +308,33 @@ public class BasicObjectsTest {
             // expected
             errors += npe.getMessage().equals("supplier") ? 0 : 1;
         }
+        return errors;
+    }
+
+    private static int testVClassObjectsMethods() {
+        int errors = 0;
+        VClass a = new VClass(42);
+        VClass b = new VClass(42);
+        VClass c = new VClass(43);
+        VClass def = new VClass(0);
+        VClass nullVClass = null;
+
+        errors += Objects.equals(a, b) ? 0 : 1;
+        errors += Objects.equals(a, c) ? 1 : 0;
+        errors += Objects.deepEquals(new VClass[] {a}, new VClass[] {b}) ? 0 : 1;
+        errors += Objects.hashCode(a) == a.hashCode() ? 0 : 1;
+        errors += Objects.hash(a, c) == Arrays.hashCode(new Object[] {a, c}) ? 0 : 1;
+        errors += Objects.toString(a).equals(a.toString()) ? 0 : 1;
+        errors += Objects.toString(nullVClass, "default").equals("default") ? 0 : 1;
+        errors += Objects.compare(a, b, Comparator.naturalOrder()) == 0 ? 0 : 1;
+        errors += Objects.compare(a, c, Comparator.naturalOrder()) < 0 ? 0 : 1;
+        errors += Objects.requireNonNull(a) == a ? 0 : 1;
+        errors += Objects.isNull(nullVClass) ? 0 : 1;
+        errors += Objects.nonNull(a) ? 0 : 1;
+        errors += Objects.requireNonNullElse(nullVClass, def) == def ? 0 : 1;
+        errors += Objects.requireNonNullElse(a, def) == a ? 0 : 1;
+        errors += Objects.requireNonNullElseGet(nullVClass, () -> def) == def ? 0 : 1;
+        errors += Objects.requireNonNullElseGet(a, () -> def) == a ? 0 : 1;
         return errors;
     }
 }

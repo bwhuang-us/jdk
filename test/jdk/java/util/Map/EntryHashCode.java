@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,12 +28,20 @@
 /*
  * @test
  * @bug 8000955
+ * @library /test/lib
  * @summary Map.Entry implementations need to comply with Map.Entry.hashCode() defined behaviour.
+ * @run testng EntryHashCode
  * @author ngmr
  */
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import jdk.test.lib.valueclass.VClass;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+
+import static org.testng.Assert.fail;
 
 public class EntryHashCode {
     private static final int TEST_SIZE = 100;
@@ -41,18 +49,6 @@ public class EntryHashCode {
     static final Object[][] entryData = {
         new Object[TEST_SIZE],
         new Object[TEST_SIZE]
-    };
-
-    @SuppressWarnings("unchecked")
-    static final Map<Object,Object>[] maps = (Map<Object,Object>[])new Map[] {
-        new HashMap<>(),
-        new Hashtable<>(),
-        new IdentityHashMap<>(),
-        new LinkedHashMap<>(),
-        new TreeMap<>(),
-        new WeakHashMap<>(),
-        new ConcurrentHashMap<>(),
-        new ConcurrentSkipListMap<>()
     };
 
     static {
@@ -67,43 +63,73 @@ public class EntryHashCode {
         }
     }
 
+    @Test(dataProvider = "Map<Object,Object>")
+    public void testEntryHashCode(String description, Map<Object,Object> map) {
+        addTestData(map);
+        checkEntryHashCodes(description, map);
+    }
+
+    @Test(dataProvider = "Map<VClass,VClass>")
+    public void testVClassEntryHashCode(String description, Map<VClass,VClass> map) {
+        addVClassTestData(map);
+        checkEntryHashCodes(description, map);
+    }
+
+    @DataProvider(name = "Map<Object,Object>")
+    private static Iterator<Object[]> makeMaps() {
+        return Arrays.asList(
+            new Object[]{"HashMap", new HashMap<>()},
+            new Object[]{"Hashtable", new Hashtable<>()},
+            new Object[]{"IdentityHashMap", new IdentityHashMap<>()},
+            new Object[]{"LinkedHashMap", new LinkedHashMap<>()},
+            new Object[]{"TreeMap", new TreeMap<>()},
+            new Object[]{"WeakHashMap", new WeakHashMap<>()},
+            new Object[]{"ConcurrentHashMap", new ConcurrentHashMap<>()},
+            new Object[]{"ConcurrentSkipListMap", new ConcurrentSkipListMap<>()}
+        ).iterator();
+    }
+
+    @DataProvider(name = "Map<VClass,VClass>")
+    private static Iterator<Object[]> makeVClassMaps() {
+        return Arrays.asList(
+            new Object[]{"HashMap", new HashMap<>()},
+            new Object[]{"Hashtable", new Hashtable<>()},
+            new Object[]{"LinkedHashMap", new LinkedHashMap<>()},
+            new Object[]{"TreeMap", new TreeMap<>()},
+            new Object[]{"ConcurrentHashMap", new ConcurrentHashMap<>()},
+            new Object[]{"ConcurrentSkipListMap", new ConcurrentSkipListMap<>()}
+        ).iterator();
+    }
+
     private static void addTestData(Map<Object,Object> map) {
         for (int i = 0; i < entryData[0].length; i++) {
             map.put(entryData[0][i], entryData[1][i]);
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        Exception failure = null;
-        for (Map<Object,Object> map: maps) {
-            addTestData(map);
+    private static void addVClassTestData(Map<VClass,VClass> map) {
+        for (int i = 0; i < TEST_SIZE; i++) {
+            map.put(new VClass(i), new VClass(i + TEST_SIZE));
+        }
+    }
 
-            try {
-                for (Map.Entry<Object,Object> e: map.entrySet()) {
-                    Object key = e.getKey();
-                    Object value = e.getValue();
-                    int expectedEntryHashCode =
-                        (Objects.hashCode(key) ^ Objects.hashCode(value));
+    private static void checkEntryHashCodes(String description, Map<?,?> map) {
+        for (Map.Entry<?,?> e: map.entrySet()) {
+            Object key = e.getKey();
+            Object value = e.getValue();
+            int expectedEntryHashCode =
+                (Objects.hashCode(key) ^ Objects.hashCode(value));
 
-                    if (e.hashCode() != expectedEntryHashCode) {
-                        throw new Exception("FAILURE: " +
-                                e.getClass().getName() +
-                                ".hashCode() does not conform to defined" +
-                                " behaviour of java.util.Map.Entry.hashCode()");
-                    }
-                }
-            } catch (Exception e) {
-                if (failure == null) {
-                    failure = e;
-                } else {
-                    failure.addSuppressed(e);
-                }
-            } finally {
-                map.clear();
+            if (e.hashCode() != expectedEntryHashCode) {
+                failEntryHashCode(description, e);
             }
         }
-        if (failure != null) {
-            throw failure;
-        }
+    }
+
+    private static void failEntryHashCode(String description, Map.Entry<?,?> e) {
+        fail("FAILURE: " + description + ": " +
+                e.getClass().getName() +
+                ".hashCode() does not conform to defined" +
+                " behaviour of java.util.Map.Entry.hashCode()");
     }
 }

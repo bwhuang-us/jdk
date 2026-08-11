@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,11 @@
  * @test
  * @bug 8171826
  * @summary Comparator default method tests
+ * @library /test/lib
  * @run testng BasicTest
  */
 
+import jdk.test.lib.valueclass.VClass;
 import org.testng.annotations.Test;
 
 import java.util.Collections;
@@ -145,6 +147,16 @@ public class BasicTest {
         Comparator<String> comp = Comparator.naturalOrder();
 
         assertComparisons(stringValues, comp, comparisons);
+    }
+
+    public void testValueClassComparator() {
+        VClass[] things = new VClass[intValues.length];
+        for (int i = 0; i < intValues.length; i++) {
+            things[i] = new VClass(intValues[i]);
+        }
+
+        assertComparisons(things, Comparator.comparingInt(v -> v.x), comparisons);
+        assertComparisons(things, Comparator.naturalOrder(), comparisons);
     }
 
     public void testReverseComparator() {

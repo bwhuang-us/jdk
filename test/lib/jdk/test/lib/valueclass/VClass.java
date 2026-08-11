@@ -23,6 +23,9 @@
 
 package jdk.test.lib.valueclass;
 
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -33,14 +36,32 @@ import java.util.Arrays;
  * allowing the same tests to exercise both modes.
  */
 @AsValueClass
-public final class VClass implements Comparable<VClass> {
+public final class VClass implements Comparable<VClass>, Serializable {
+    private static final long serialVersionUID = 1L;
     public int x;
     public int[] arr;
     public VClass(int x, int[] arr) { this.x = x; this.arr = arr; }
+    public VClass(int x) { this(x, new int[] { x }); }
     public int compareTo(VClass other) {
         int cmp = Integer.compare(x, other.x);
         return cmp != 0 ? cmp : Arrays.compare(arr, other.arr);
     }
     public boolean equals(Object o) { return o instanceof VClass t && x == t.x && Arrays.equals(arr, t.arr); }
     public int hashCode() { return 31 * x + Arrays.hashCode(arr); }
+
+    private Object writeReplace() {
+        return new SerializationProxy(x, arr);
+    }
+
+    private void readObject(ObjectInputStream in) throws InvalidObjectException {
+        throw new InvalidObjectException("use serialization proxy");
+    }
+
+    private static final class SerializationProxy implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private final int x;
+        private final int[] arr;
+        SerializationProxy(int x, int[] arr) { super(); this.x = x; this.arr = arr; }
+        private Object readResolve() { return new VClass(x, arr); }
+    }
 }

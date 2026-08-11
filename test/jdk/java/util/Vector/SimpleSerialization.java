@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@
  * @bug 6934356
  * @summary A serialized Vector can be successfully de-serialized.
  * @author Neil Richards <neil.richards@ngmr.net>, <neil_richards@uk.ibm.com>
+ * @library /test/lib
  */
 
 import java.io.ByteArrayInputStream;
@@ -41,6 +42,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Vector;
 
+import jdk.test.lib.valueclass.VClass;
+
 public class SimpleSerialization {
     public static void main(final String[] args) throws Exception {
         final Vector<String> v1 = new Vector<>();
@@ -48,10 +51,21 @@ public class SimpleSerialization {
         v1.add("entry1");
         v1.add("entry2");
 
+        testSerialization(v1);
+
+        final Vector<VClass> v2 = new Vector<>();
+
+        v2.add(new VClass(1));
+        v2.add(new VClass(2));
+
+        testSerialization(v2);
+    }
+
+    private static void testSerialization(final Vector<?> vector) throws Exception {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final ObjectOutputStream oos = new ObjectOutputStream(baos);
 
-        oos.writeObject(v1);
+        oos.writeObject(vector);
         oos.close();
 
         final byte[] data = baos.toByteArray();
@@ -61,8 +75,8 @@ public class SimpleSerialization {
         final Object deserializedObject = ois.readObject();
         ois.close();
 
-        if (false == v1.equals(deserializedObject)) {
-            throw new RuntimeException(getFailureText(v1, deserializedObject));
+        if (false == vector.equals(deserializedObject)) {
+            throw new RuntimeException(getFailureText(vector, deserializedObject));
         }
     }
 

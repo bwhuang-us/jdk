@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotSame;
 import static org.testng.Assert.assertSame;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -197,6 +198,46 @@ public class SetFactories {
     public void containsAll(Set<String> act, Set<String> exp) {
         assertTrue(act.containsAll(exp));
         assertTrue(exp.containsAll(act));
+    }
+
+    @Test
+    public void integerFactoryCases() {
+        List<Set<Integer>> sets = List.of(
+                Set.of(101),
+                Set.of(101, 102),
+                Set.of(101, 102, 103),
+                Set.of(101, 102, 103, 104),
+                Set.of(101, 102, 103, 104, 105),
+                Set.of(101, 102, 103, 104, 105, 106),
+                Set.of(101, 102, 103, 104, 105, 106, 107),
+                Set.of(101, 102, 103, 104, 105, 106, 107, 108),
+                Set.of(101, 102, 103, 104, 105, 106, 107, 108, 109),
+                Set.of(101, 102, 103, 104, 105, 106, 107, 108, 109, 110));
+
+        for (int i = 0; i < sets.size(); i++) {
+            Set<Integer> actual = sets.get(i);
+            Set<Integer> expected = new HashSet<>();
+            for (int j = 0; j <= i; j++) {
+                expected.add(101 + j);
+            }
+            assertEquals(actual, expected);
+            assertEquals(actual.hashCode(), expected.hashCode());
+            assertTrue(actual.containsAll(expected));
+            assertTrue(expected.containsAll(actual));
+            assertThrows(UnsupportedOperationException.class, () -> actual.add(111));
+            assertThrows(UnsupportedOperationException.class,
+                    () -> actual.remove(actual.iterator().next()));
+        }
+
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 103, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 103, 104, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 103, 104, 105, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 103, 104, 105, 106, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 103, 104, 105, 106, 107, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 103, 104, 105, 106, 107, 108, 101));
+        assertThrows(IllegalArgumentException.class, () -> Set.of(101, 102, 103, 104, 105, 106, 107, 108, 109, 101));
     }
 
     @Test(expectedExceptions=NullPointerException.class)

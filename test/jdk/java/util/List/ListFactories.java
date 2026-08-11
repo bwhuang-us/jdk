@@ -50,10 +50,13 @@ import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.fail;
 
+import jdk.test.lib.valueclass.VClass;
+
 /*
  * @test
  * @bug 8048330 8203184
  * @summary Test convenience static factory methods on List.
+ * @library /test/lib
  * @run testng ListFactories
  */
 
@@ -72,6 +75,18 @@ public class ListFactories {
     // returns array of [actual, expected]
     static Object[] a(List<String> act, List<String> exp) {
         return new Object[] { act, exp };
+    }
+
+    static Object[] anewVClass(List<VClass> act, List<VClass> exp) {
+        return new Object[] { act, exp };
+    }
+
+    static VClass[] values(int... values) {
+        VClass[] result = new VClass[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = new VClass(values[i]);
+        }
+        return result;
     }
 
     @DataProvider(name="empty")
@@ -106,6 +121,25 @@ public class ListFactories {
                asList("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")),
             a(List.of(stringArray),
                asList(stringArray))
+        ).iterator();
+    }
+
+    @DataProvider(name="valueNonempty")
+    public Iterator<Object[]> valueNonempty() {
+        VClass[] allValues = values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19);
+        return asList(
+            anewVClass(List.of(new VClass(1)),
+               asList(new VClass(1))),
+            anewVClass(List.of(new VClass(1), new VClass(2)),
+               asList(new VClass(1), new VClass(2))),
+            anewVClass(List.of(new VClass(1), new VClass(2), new VClass(3)),
+               asList(new VClass(1), new VClass(2), new VClass(3))),
+            anewVClass(List.of(new VClass(1), new VClass(2), new VClass(3), new VClass(4)),
+               asList(new VClass(1), new VClass(2), new VClass(3), new VClass(4))),
+            anewVClass(List.of(new VClass(1), new VClass(2), new VClass(3), new VClass(4), new VClass(5)),
+               asList(new VClass(1), new VClass(2), new VClass(3), new VClass(4), new VClass(5))),
+            anewVClass(List.of(allValues),
+               asList(allValues))
         ).iterator();
     }
 
@@ -178,6 +212,31 @@ public class ListFactories {
 
     @Test(dataProvider="all")
     public void contentsMatch(List<String> act, List<String> exp) {
+        assertEquals(act, exp);
+    }
+
+    @Test(dataProvider="valueNonempty", expectedExceptions=UnsupportedOperationException.class)
+    public void valueCannotAddLast(List<VClass> act, List<VClass> exp) {
+        act.add(new VClass(99));
+    }
+
+    @Test(dataProvider="valueNonempty", expectedExceptions=UnsupportedOperationException.class)
+    public void valueCannotAddFirst(List<VClass> act, List<VClass> exp) {
+        act.add(0, new VClass(99));
+    }
+
+    @Test(dataProvider="valueNonempty", expectedExceptions=UnsupportedOperationException.class)
+    public void valueCannotRemove(List<VClass> act, List<VClass> exp) {
+        act.remove(0);
+    }
+
+    @Test(dataProvider="valueNonempty", expectedExceptions=UnsupportedOperationException.class)
+    public void valueCannotSet(List<VClass> act, List<VClass> exp) {
+        act.set(0, new VClass(99));
+    }
+
+    @Test(dataProvider="valueNonempty")
+    public void valueContentsMatch(List<VClass> act, List<VClass> exp) {
         assertEquals(act, exp);
     }
 
@@ -256,6 +315,14 @@ public class ListFactories {
         assertEquals(list, Arrays.asList(stringArray));
     }
 
+    @Test
+    public void valueArrayCannotModifyList() {
+        VClass[] array = values(1, 2, 3);
+        List<VClass> list = List.of(array);
+        array[0] = new VClass(99);
+        assertEquals(list, asList(values(1, 2, 3)));
+    }
+
     @Test(dataProvider="all", expectedExceptions=NullPointerException.class)
     public void containsNullShouldThrowNPE(List<String> act, List<String> exp) {
         act.contains(null);
@@ -282,6 +349,13 @@ public class ListFactories {
     public void serialEquality(List<String> act, List<String> exp) {
         // assume that act.equals(exp) tested elsewhere
         List<String> copy = serialClone(act);
+        assertEquals(act, copy);
+        assertEquals(copy, exp);
+    }
+
+    @Test(dataProvider="valueNonempty")
+    public void valueSerialEquality(List<VClass> act, List<VClass> exp) {
+        List<VClass> copy = serialClone(act);
         assertEquals(act, copy);
         assertEquals(copy, exp);
     }
@@ -319,6 +393,25 @@ public class ListFactories {
         List<Integer> orig = genList();
         List<Integer> copy = List.copyOf(orig);
         orig.add(4);
+
+        assertNotEquals(orig, copy);
+        assertNotEquals(copy, orig);
+    }
+
+    @Test
+    public void valueCopyOfResultsEqual() {
+        List<VClass> orig = new ArrayList<>(asList(values(1, 2, 3)));
+        List<VClass> copy = List.copyOf(orig);
+
+        assertEquals(orig, copy);
+        assertEquals(copy, orig);
+    }
+
+    @Test
+    public void valueCopyOfModifiedUnequal() {
+        List<VClass> orig = new ArrayList<>(asList(values(1, 2, 3)));
+        List<VClass> copy = List.copyOf(orig);
+        orig.add(new VClass(4));
 
         assertNotEquals(orig, copy);
         assertNotEquals(copy, orig);
@@ -367,6 +460,11 @@ public class ListFactories {
         List<String> list = List.copyOf(Stream.of("a", null, "c").toList());
     }
 
+    @Test(expectedExceptions=NullPointerException.class)
+    public void valueCopyOfRejectsNullElements() {
+        List<VClass> list = List.copyOf(asList(new VClass(1), null, new VClass(3)));
+    }
+
     @Test
     public void copyOfCopiesNullAllowingList() {
         List<String> orig = Stream.of("a", "b", "c").toList();
@@ -402,5 +500,15 @@ public class ListFactories {
         } else {
             assertThrows(NoSuchElementException.class, act::getLast);
         }
+    }
+
+    @Test(dataProvider = "valueNonempty")
+    public void valueGetFirst(List<VClass> act, List<VClass> exp) {
+        assertEquals(act.getFirst(), exp.getFirst());
+    }
+
+    @Test(dataProvider = "valueNonempty")
+    public void valueGetLast(List<VClass> act, List<VClass> exp) {
+        assertEquals(act.getLast(), exp.getLast());
     }
 }

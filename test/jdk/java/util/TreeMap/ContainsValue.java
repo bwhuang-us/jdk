@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1999, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,21 @@
  * @test
  * @bug 4212425
  * @summary TreeMap.containsValue throws NullPointerExc for empty TreeMap
+ * @library /test/lib
  */
 
 import java.util.Map;
 import java.util.TreeMap;
 
+import jdk.test.lib.valueclass.VClass;
+
 public class ContainsValue {
     public static void main(String[] args) {
+        testStringValue();
+        testVClassValue();
+    }
+
+    private static void testStringValue() {
         Map map = new TreeMap();
 
         if (map.containsValue ("gemutlichkeit"))
@@ -45,6 +53,25 @@ public class ContainsValue {
 
         if (!map.containsValue ("gemutlichkeit"))
             throw new RuntimeException("containsValue pessimistic (non-null)");
+
+        if (!map.containsValue (null))
+            throw new RuntimeException("containsValue pessimistic (null)");
+    }
+
+    private static void testVClassValue() {
+        Map map = new TreeMap();
+
+        if (map.containsValue (new VClass(42)))
+            throw new RuntimeException("containsValue optimistic (VClass)");
+
+        if (map.containsValue (null))
+            throw new RuntimeException("containsValue optimistic (null)");
+
+        map.put("a", null);
+        map.put("b", new VClass(42));
+
+        if (!map.containsValue (new VClass(42)))
+            throw new RuntimeException("containsValue pessimistic (VClass)");
 
         if (!map.containsValue (null))
             throw new RuntimeException("containsValue pessimistic (null)");

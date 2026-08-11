@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,13 @@
  * @summary AbstractCollection.toArray(T[]) doesn't return the given array
  *           in concurrent modification.
  * @author Ulf Zibis, David Holmes
+ * @library /test/lib
  */
 
 import java.util.AbstractCollection;
 import java.util.Arrays;
 import java.util.Iterator;
+import jdk.test.lib.valueclass.VClass;
 
 public class ToArrayTest {
 
@@ -86,10 +88,14 @@ public class ToArrayTest {
 
     static final Object[] OBJECTS = { new Object(), new Object(), new Object() };
     static final TestCollection<?> CANDIDATE = new TestCollection<Object>(OBJECTS);
+    static final VClass[] VCLASSES = { new VClass(1), new VClass(2), new VClass(3) };
+    static final TestCollection<VClass> VALUE_CANDIDATE = new TestCollection<>(VCLASSES);
     static final int CAP = OBJECTS.length; // capacity of the CANDIDATE
     static final int LAST = CAP - 1; // last possible array index
     Object[] a;
     Object[] res;
+    VClass[] va;
+    VClass[] vres;
 
     int last() {
         return a.length - 1;
@@ -187,10 +193,89 @@ public class ToArrayTest {
 
     }
 
+    protected void testValueClass() throws Throwable {
+        // Check more elements than a.length
+        va = new VClass[CAP - 1]; // appears too small
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres != va);
+        check(vres[LAST] != null);
+
+        // Check equal elements as a.length
+        va = new VClass[CAP]; // appears to match
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres == va);
+        check(vres[lastValue()] != null);
+
+        // Check equal elements as a.length
+        va = new VClass[CAP + 1]; // appears too big
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres == va);
+        check(vres[lastValue()] == null);
+
+        // Check less elements than expected, but more than a.length
+        va = new VClass[CAP - 2]; // appears too small
+        VALUE_CANDIDATE.setSizeSequence(CAP, CAP - 1);
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres != va);
+        check(vres.length == CAP - 1);
+        check(vres[LAST - 1] != null);
+
+        // Check less elements than expected, but equal as a.length
+        va = Arrays.copyOf(VCLASSES, CAP); // appears to match
+        VALUE_CANDIDATE.setSizeSequence(CAP, CAP - 1);
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres == va);
+        check(vres[lastValue()] == null);
+
+        // Check more elements than expected and more than a.length
+        va = new VClass[CAP - 1]; // appears to match
+        VALUE_CANDIDATE.setSizeSequence(CAP - 1, CAP);
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres != va);
+        check(vres[LAST] != null);
+
+        // Check more elements than expected, but equal as a.length
+        va = new VClass[CAP - 1]; // appears to match
+        VALUE_CANDIDATE.setSizeSequence(CAP - 2, CAP - 1);
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres == va);
+        check(vres[lastValue()] != null);
+
+        // Check more elements than expected, but less than a.length
+        va = Arrays.copyOf(VCLASSES, CAP); // appears to match
+        VALUE_CANDIDATE.setSizeSequence(CAP - 2, CAP - 1);
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres == va);
+        check(vres[lastValue()] == null);
+
+        testValue_7121314();
+    }
+
+    protected void testValue_7121314() throws Throwable {
+        // Check equal elements as a.length, but less than expected
+        va = new VClass[CAP - 1]; // appears too small
+        VALUE_CANDIDATE.setSizeSequence(CAP, CAP - 1);
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres == va);
+        check(vres[lastValue()] != null);
+
+        // Check less elements than a.length and less than expected
+        va = Arrays.copyOf(VCLASSES, CAP - 1); // appears too small
+        VALUE_CANDIDATE.setSizeSequence(CAP, CAP - 2);
+        vres = VALUE_CANDIDATE.toArray(va);
+        check(vres == va);
+        check(vres[lastValue()] == null);
+    }
+
+    int lastValue() {
+        return va.length - 1;
+    }
+
     public static void main(String[] args) throws Throwable {
         ToArrayTest testcase = new ToArrayTest();
         try {
             testcase.test();
+            testcase.testValueClass();
         } catch (Throwable t) {
             unexpected(t);
         }

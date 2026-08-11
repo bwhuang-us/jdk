@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,15 @@
 /*
  * @test
  * @bug 8008785 8336669
+ * @library /test/lib
  * @summary Ensure toArray() implementations return correct results.
  * @author Mike Duigou
  */
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import jdk.test.lib.valueclass.VClass;
 
 public class ToArray {
 
@@ -58,6 +61,23 @@ public class ToArray {
         for (Map<String, Long> map : maps) {
              try {
                 testMap(map);
+             } catch(Exception all) {
+                unexpected("Failed for " + map.getClass().getName(), all);
+             }
+        }
+
+        Map<VClass, VClass>[] vclassMaps = (Map<VClass, VClass>[]) new Map<?,?>[]{
+                    new HashMap<>(),
+                    new Hashtable<>(),
+                    new LinkedHashMap<>(),
+                    new TreeMap<>(),
+                    new ConcurrentHashMap<>(),
+                    new ConcurrentSkipListMap<>()
+                };
+
+        for (Map<VClass, VClass> map : vclassMaps) {
+             try {
+                testVClassMap(map);
              } catch(Exception all) {
                 unexpected("Failed for " + map.getClass().getName(), all);
              }
@@ -111,6 +131,38 @@ public class ToArray {
 
         for(int each = 0; each < TEST_SIZE; each++) {
             check( "unexpected entry", entries[each].getKey() == KEYS[each] && entries[each].getValue() == VALUES[each]);
+        }
+    }
+
+    private static void testVClassMap(Map<VClass, VClass> map) {
+        System.out.println("Testing " + map.getClass() + " with VClass");
+        System.out.flush();
+
+        for (int each = 0; each < TEST_SIZE; each++) {
+            map.put(new VClass(each), new VClass(each + TEST_SIZE));
+        }
+
+        Object[] keys = map.keySet().toArray();
+        Arrays.sort(keys);
+
+        for(int each = 0; each < TEST_SIZE; each++) {
+            check( "unexpected key", keys[each].equals(new VClass(each)));
+        }
+
+        Object[] values = map.values().toArray();
+        Arrays.sort(values);
+
+        for(int each = 0; each < TEST_SIZE; each++) {
+            check( "unexpected value", values[each].equals(new VClass(each + TEST_SIZE)));
+        }
+
+        Map.Entry<VClass,VClass>[] entries = map.entrySet().toArray(new Map.Entry[TEST_SIZE]);
+        Arrays.sort(entries, Comparator.comparing(Map.Entry::getKey));
+
+        for(int each = 0; each < TEST_SIZE; each++) {
+            check( "unexpected entry",
+                    entries[each].getKey().equals(new VClass(each)) &&
+                    entries[each].getValue().equals(new VClass(each + TEST_SIZE)));
         }
     }
 

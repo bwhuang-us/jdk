@@ -47,11 +47,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import jdk.test.lib.valueclass.VClass;
+
 /**
  * @test
  * @summary Unit tests for extension methods on List
  * @bug 8023367 8037106 8325679
- * @library ../Collection/testlibrary
+ * @library ../Collection/testlibrary /test/lib
  * @build CollectionAsserts CollectionSupplier ExtendsAbstractList
  * @run testng ListDefaults
  */
@@ -96,6 +98,14 @@ public class ListDefaults {
     private static final int SUBLIST_TO = SIZE - 5;
     private static final int SUBLIST_SIZE = SUBLIST_TO - SUBLIST_FROM;
 
+    private static List<VClass> valueData(int size) {
+        List<VClass> data = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            data.add(new VClass(i));
+        }
+        return data;
+    }
+
     // call the callback for each recursive subList
     private void trimmedSubList(final List<Integer> list, final Consumer<List<Integer>> callback) {
         int size = list.size();
@@ -126,6 +136,31 @@ public class ListDefaults {
         cases.add(new Object[]{s});
         cases.add(new Object[] { new CopyOnWriteArrayList<>(l) });
         cases.add(new Object[] { l });
+        return cases.toArray(new Object[0][cases.size()]);
+    }
+
+    @DataProvider(name="valueListProvider", parallel=true)
+    public static Object[][] valueListCases() {
+        final List<VClass> data = valueData(SIZE);
+        final List<Object[]> cases = new LinkedList<>();
+        cases.add(new Object[] { new ArrayList<>(data) });
+        cases.add(new Object[] { new LinkedList<>(data) });
+        cases.add(new Object[] { new Vector<>(data) });
+        cases.add(new Object[] { new CopyOnWriteArrayList<>(data) });
+        cases.add(new Object[] { new ExtendsAbstractList<>(data) });
+        cases.add(new Object[] { Arrays.asList(data.toArray(new VClass[0])) });
+        return cases.toArray(new Object[0][cases.size()]);
+    }
+
+    @DataProvider(name="valueStructModListProvider", parallel=true)
+    public static Object[][] valueStructModListCases() {
+        final List<VClass> data = valueData(SIZE);
+        final List<Object[]> cases = new LinkedList<>();
+        cases.add(new Object[] { new ArrayList<>(data) });
+        cases.add(new Object[] { new LinkedList<>(data) });
+        cases.add(new Object[] { new Vector<>(data) });
+        cases.add(new Object[] { new CopyOnWriteArrayList<>(data) });
+        cases.add(new Object[] { new ExtendsAbstractList<>(data) });
         return cases.toArray(new Object[0][cases.size()]);
     }
 
@@ -185,6 +220,18 @@ public class ListDefaults {
                     CollectionAsserts.assertContents(a, l);
                 });
         }
+    }
+
+    @Test(dataProvider = "valueListProvider")
+    public void testValueForEach(final List<VClass> list) {
+        final List<VClass> actual = new LinkedList<>();
+        list.forEach(actual::add);
+        assertEquals(actual, list);
+
+        final List<VClass> subList = list.subList(SUBLIST_FROM, SUBLIST_TO);
+        final List<VClass> actualSubList = new LinkedList<>();
+        subList.forEach(actualSubList::add);
+        assertEquals(actualSubList, subList);
     }
 
     @Test
@@ -268,6 +315,16 @@ public class ListDefaults {
         }
     }
 
+    @Test(dataProvider = "valueStructModListProvider")
+    public void testValueRemoveIf(final List<VClass> list) {
+        assertTrue(list.removeIf(x -> (x.x % 2) == 1));
+        for (VClass value : list) {
+            assertTrue((value.x % 2) == 0);
+        }
+        assertTrue(list.removeIf(x -> (x.x % 2) == 0));
+        assertTrue(list.isEmpty());
+    }
+
     // remove the first element
     private void removeFirst(final List<Integer> original, final List<Integer> list, final AtomicInteger offset) {
         final AtomicBoolean first = new AtomicBoolean(true);
@@ -326,6 +383,22 @@ public class ListDefaults {
                     assertTrue(l.get(i) == (offset + copy.get(i)), "mismatch at index " + i);
                 }
             });
+        }
+    }
+
+    @Test(dataProvider = "valueListProvider")
+    public void testValueReplaceAll(final List<VClass> list) {
+        List<VClass> copy = new ArrayList<>(list);
+        list.replaceAll(x ->  new VClass(x.x + 5));
+        for (int i = 0; i < copy.size(); i++) {
+            assertEquals(list.get(i),  new VClass(copy.get(i).x + 5));
+        }
+
+        final List<VClass> subList = list.subList(SUBLIST_FROM, SUBLIST_TO);
+        List<VClass> subListCopy = new ArrayList<>(subList);
+        subList.replaceAll(x ->  new VClass(x.x + 1));
+        for (int i = 0; i < subList.size(); i++) {
+            assertEquals(subList.get(i),  new VClass(subListCopy.get(i).x + 1));
         }
     }
 
@@ -423,6 +496,18 @@ public class ListDefaults {
                 CollectionAsserts.assertSorted(l, Comparator.naturalOrder());
             });
         }
+    }
+
+    @Test(dataProvider = "valueListProvider")
+    public void testValueSort(final List<VClass> list) {
+        CollectionSupplier.shuffle(list);
+        list.sort(Comparator.naturalOrder());
+        CollectionAsserts.assertSorted(list, Comparator.naturalOrder());
+
+        final List<VClass> subList = list.subList(SUBLIST_FROM, SUBLIST_TO);
+        CollectionSupplier.shuffle(subList);
+        subList.sort(Comparator.reverseOrder());
+        CollectionAsserts.assertSorted(subList, Comparator.reverseOrder());
     }
 
     @Test
@@ -541,5 +626,19 @@ public class ListDefaults {
         final List<Integer> sublist2 = list.subList(2, 5);
         assertTrue(sublist2.removeIf(x -> x == 3));
         CollectionAsserts.assertContents(list, SLICED_EXPECTED2);
+    }
+
+    @Test
+    public void testValueRemoveIfFromSlice() {
+        final List<VClass> list = new ArrayList<>(valueData(10));
+        final List<VClass> sublist = list.subList(3, 6);
+        assertTrue(sublist.removeIf(x -> x.x == 4));
+        assertEquals(list, Arrays.asList( new VClass(0),  new VClass(1),  new VClass(2),  new VClass(3),  new VClass(5),
+                                          new VClass(6),  new VClass(7),  new VClass(8),  new VClass(9)));
+
+        final List<VClass> sublist2 = list.subList(2, 5);
+        assertTrue(sublist2.removeIf(x -> x.x == 3));
+        assertEquals(list, Arrays.asList( new VClass(0),  new VClass(1),  new VClass(2),  new VClass(5),
+                                          new VClass(6),  new VClass(7),  new VClass(8),  new VClass(9)));
     }
 }

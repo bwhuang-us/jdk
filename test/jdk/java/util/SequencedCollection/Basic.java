@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import jdk.test.lib.valueclass.VClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -35,6 +36,7 @@ import static org.testng.Assert.assertTrue;
 /*
  * @test
  * @bug     8266571
+ * @library /test/lib
  * @summary Basic tests for SequencedCollection
  * @modules java.base/java.util:open
  * @build   SimpleDeque SimpleList SimpleSortedSet
@@ -48,6 +50,8 @@ public class Basic {
     // ========== Data Providers ==========
 
     static final List<String> ORIGINAL = List.of("a", "b", "c", "d", "e", "f", "g");
+    static final List<VClass> ORIGINAL_VCLASS =
+        List.of(new VClass(1), new VClass(2), new VClass(3), new VClass(4));
 
     static List<String> cklist(List<String> contents) {
         return Collections.checkedList(contents, String.class);
@@ -68,7 +72,14 @@ public class Basic {
         return ss;
     }
 
-    static SequencedCollection<String> ucoll(SequencedCollection<String> coll) {
+    static SequencedSet<VClass> vclassSetFromMap(List<VClass> contents) {
+        var lhm = new LinkedHashMap<VClass, Boolean>();
+        var ss = Collections.newSequencedSetFromMap(lhm);
+        ss.addAll(contents);
+        return ss;
+    }
+
+    static <T> SequencedCollection<T> ucoll(SequencedCollection<T> coll) {
         return Collections.unmodifiableSequencedCollection(coll);
     }
 
@@ -84,7 +95,7 @@ public class Basic {
         return Collections.unmodifiableNavigableSet(set);
     }
 
-    static SequencedSet<String> uset(SequencedSet<String> set) {
+    static <T> SequencedSet<T> uset(SequencedSet<T> set) {
         return Collections.unmodifiableSequencedSet(set);
     }
 
@@ -104,6 +115,52 @@ public class Basic {
         populated().forEachRemaining(result::add);
         empties().forEachRemaining(result::add);
         return result.iterator();
+    }
+
+    @DataProvider(name="vclassPopulated")
+    public Iterator<Object[]> vclassPopulated() {
+        return Arrays.asList(
+            new Object[] { "ArrayDeque", new ArrayDeque<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "ArrayList", new ArrayList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "LinkedHashSet", new LinkedHashSet<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "LinkedList", new LinkedList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "ListOf", ORIGINAL_VCLASS, ORIGINAL_VCLASS },
+            new Object[] { "SetFromMap", vclassSetFromMap(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "SimpleDeque", new SimpleDeque<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "SimpleList", new SimpleList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "SimpleSortedSet", new SimpleSortedSet<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "TreeSet", new TreeSet<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "UnmodColl", ucoll(new ArrayList<>(ORIGINAL_VCLASS)), ORIGINAL_VCLASS },
+            new Object[] { "UnmodSet", uset(new LinkedHashSet<>(ORIGINAL_VCLASS)), ORIGINAL_VCLASS }
+        ).iterator();
+    }
+
+    @DataProvider(name="vclassAdds")
+    public Iterator<Object[]> vclassAdds() {
+        return Arrays.asList(
+            new Object[] { "ArrayDeque", new ArrayDeque<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "ArrayList", new ArrayList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "LinkedHashSet", new LinkedHashSet<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "LinkedList", new LinkedList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "SetFromMap", vclassSetFromMap(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "SimpleDeque", new SimpleDeque<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "SimpleList", new SimpleList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS }
+        ).iterator();
+    }
+
+    @DataProvider(name="vclassSerializable")
+    public Iterator<Object[]> vclassSerializable() {
+        return Arrays.asList(
+            new Object[] { "ArrayDeque", new ArrayDeque<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "ArrayList", new ArrayList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "LinkedHashSet", new LinkedHashSet<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "LinkedList", new LinkedList<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "ListOf", ORIGINAL_VCLASS, ORIGINAL_VCLASS },
+            new Object[] { "SetFromMap", vclassSetFromMap(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "TreeSet", new TreeSet<>(ORIGINAL_VCLASS), ORIGINAL_VCLASS },
+            new Object[] { "UnmodColl", ucoll(new ArrayList<>(ORIGINAL_VCLASS)), ORIGINAL_VCLASS },
+            new Object[] { "UnmodSet", uset(new LinkedHashSet<>(ORIGINAL_VCLASS)), ORIGINAL_VCLASS }
+        ).iterator();
     }
 
     @DataProvider(name="populated")
@@ -429,6 +486,50 @@ public class Basic {
         checkContents1(rrseq, ref);
     }
 
+    public void checkVClassContents1(SequencedCollection<VClass> seq, List<VClass> ref) {
+        var list1 = new ArrayList<VClass>();
+        for (var e : seq)
+            list1.add(e);
+        assertEquals(list1, ref);
+
+        var list2 = new ArrayList<VClass>();
+        seq.forEach(list2::add);
+        assertEquals(list2, ref);
+
+        var list3 = Arrays.asList(seq.toArray());
+        assertEquals(list3, ref);
+
+        var list4 = Arrays.asList(seq.toArray(new VClass[0]));
+        assertEquals(list4, ref);
+
+        var list5 = Arrays.asList(seq.toArray(VClass[]::new));
+        assertEquals(list5, ref);
+
+        var list6 = seq.stream().toList();
+        assertEquals(list6, ref);
+
+        var list7 = seq.parallelStream().toList();
+        assertEquals(list7, ref);
+
+        assertEquals(seq.size(), ref.size());
+        assertEquals(seq.isEmpty(), ref.isEmpty());
+
+        for (var e : ref) {
+            assertTrue(seq.contains(e));
+        }
+    }
+
+    public void checkVClassContents(SequencedCollection<VClass> seq, List<VClass> ref) {
+        checkVClassContents1(seq, ref);
+
+        var rref = copyReversed(ref);
+        var rseq = seq.reversed();
+        checkVClassContents1(rseq, rref);
+
+        var rrseq = rseq.reversed();
+        checkVClassContents1(rrseq, ref);
+    }
+
     /**
      * Check that modification operations will throw UnsupportedOperationException,
      * in one direction.
@@ -498,6 +599,34 @@ public class Basic {
     @Test(dataProvider="all")
     public void testFundamentals(String label, SequencedCollection<String> seq, List<String> ref) {
         checkContents(seq, ref);
+    }
+
+    @Test(dataProvider="vclassPopulated")
+    public void testVClassFundamentals(String label, SequencedCollection<VClass> seq, List<VClass> ref) {
+        assertEquals(seq.getFirst(), ref.get(0));
+        assertEquals(seq.getLast(), ref.get(ref.size() - 1));
+        assertEquals(seq.reversed().getFirst(), ref.get(ref.size() - 1));
+        assertEquals(seq.reversed().getLast(), ref.get(0));
+        checkVClassContents(seq, ref);
+    }
+
+    @Test(dataProvider="vclassAdds")
+    public void testVClassAddRemove(String label, SequencedCollection<VClass> seq, List<VClass> baseref) {
+        var first = new VClass(0);
+        var last = new VClass(5);
+        var ref = new ArrayList<>(baseref);
+
+        seq.addFirst(first);
+        ref.add(0, first);
+        seq.addLast(last);
+        ref.add(last);
+        checkVClassContents(seq, ref);
+
+        assertEquals(seq.removeFirst(), first);
+        ref.remove(0);
+        assertEquals(seq.reversed().removeFirst(), last);
+        ref.remove(ref.size() - 1);
+        checkVClassContents(seq, ref);
     }
 
     @Test(dataProvider="populated")
@@ -639,6 +768,22 @@ public class Basic {
              var ois = new ObjectInputStream(bais)) {
             var seq2 = (SequencedCollection<String>) ois.readObject();
             checkContents(seq2, ref);
+        }
+    }
+
+    @Test(dataProvider="vclassSerializable")
+    public void testVClassSerializable(String label, SequencedCollection<VClass> seq, List<VClass> ref)
+        throws ClassNotFoundException, IOException
+    {
+        var baos = new ByteArrayOutputStream();
+        try (var oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(seq);
+        }
+
+        try (var bais = new ByteArrayInputStream(baos.toByteArray());
+             var ois = new ObjectInputStream(bais)) {
+            var seq2 = (SequencedCollection<VClass>) ois.readObject();
+            checkVClassContents(seq2, ref);
         }
     }
 

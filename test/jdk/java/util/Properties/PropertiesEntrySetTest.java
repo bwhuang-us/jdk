@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,14 @@
 /*
  * @test
  * @bug        8245694
+ * @library    /test/lib
  * @summary    tests the entrySet() method of Properties class
  * @author     Yu Li
  * @run junit PropertiesEntrySetTest
  */
 
+
+import jdk.test.lib.valueclass.VClass;
 
 import java.util.Properties;
 
@@ -197,5 +200,60 @@ public class PropertiesEntrySetTest {
 
         assertThrows(UnsupportedOperationException.class, () -> aEntrySet.addAll(bEntrySet));
         assertThrows(UnsupportedOperationException.class, () -> aEntrySet.add(bEntrySet.iterator().next()));
+    }
+
+    @Test
+    public void testVClassEntrySet() {
+        Properties a = new Properties();
+        var aEntrySet = a.entrySet();
+
+        Properties b = new Properties();
+        var bEntrySet = b.entrySet();
+        assertTrue(bEntrySet.equals(aEntrySet));
+        assertTrue(bEntrySet.hashCode() == aEntrySet.hashCode());
+
+        a.put(new VClass(1), new VClass(11));
+        assertFalse(bEntrySet.equals(aEntrySet));
+        assertFalse(bEntrySet.hashCode() == aEntrySet.hashCode());
+
+        b.put(new VClass(1), new VClass(11));
+        assertTrue(aEntrySet.equals(bEntrySet));
+        assertTrue(bEntrySet.hashCode() == aEntrySet.hashCode());
+
+        Properties c = new Properties();
+        c.put(new VClass(1), new VClass(12));
+        var cEntrySet = c.entrySet();
+        assertFalse(cEntrySet.equals(bEntrySet));
+        assertFalse(bEntrySet.hashCode() == cEntrySet.hashCode());
+
+        a.put(new VClass(2), new VClass(22));
+        Properties d = new Properties();
+        d.put(new VClass(2), new VClass(22));
+        d.put(new VClass(1), new VClass(11));
+        var dEntrySet = d.entrySet();
+        assertTrue(dEntrySet.equals(aEntrySet));
+        assertTrue(aEntrySet.hashCode() == dEntrySet.hashCode());
+
+        a.remove(new VClass(1));
+        assertFalse(aEntrySet.equals(dEntrySet));
+        assertFalse(aEntrySet.hashCode() == dEntrySet.hashCode());
+
+        d.remove(new VClass(1), new VClass(11));
+        assertTrue(dEntrySet.equals(aEntrySet));
+        assertTrue(aEntrySet.hashCode() == dEntrySet.hashCode());
+
+        var i = aEntrySet.iterator();
+        var e = i.next();
+        i.remove();
+        assertFalse(aEntrySet.contains(e));
+        assertTrue(aEntrySet.isEmpty());
+
+        a.put(new VClass(3), new VClass(33));
+        assertTrue(aEntrySet.toString().trim().startsWith("["));
+        assertTrue(aEntrySet.toString().contains("="));
+        assertTrue(aEntrySet.toString().trim().endsWith("]"));
+
+        assertThrows(UnsupportedOperationException.class, () -> aEntrySet.addAll(dEntrySet));
+        assertThrows(UnsupportedOperationException.class, () -> aEntrySet.add(dEntrySet.iterator().next()));
     }
 }

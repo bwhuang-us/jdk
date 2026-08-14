@@ -35,43 +35,24 @@ import jdk.test.lib.valueclass.VClass;
 
 public class ContainsValue {
     public static void main(String[] args) {
-        testStringValue();
-        testVClassValue();
+        test("gemutlichkeit");
+        test(new VClass(42));
     }
 
-    private static void testStringValue() {
+    private static void test(Object value) {
         Map map = new TreeMap();
 
-        if (map.containsValue ("gemutlichkeit"))
+        if (map.containsValue (value))
             throw new RuntimeException("containsValue optimistic (non-null)");
 
         if (map.containsValue (null))
             throw new RuntimeException("containsValue optimistic (null)");
 
         map.put("a", null);
-        map.put("b", "gemutlichkeit");
+        map.put("b", value);
 
-        if (!map.containsValue ("gemutlichkeit"))
+        if (!map.containsValue (value))
             throw new RuntimeException("containsValue pessimistic (non-null)");
-
-        if (!map.containsValue (null))
-            throw new RuntimeException("containsValue pessimistic (null)");
-    }
-
-    private static void testVClassValue() {
-        Map map = new TreeMap();
-
-        if (map.containsValue (new VClass(42)))
-            throw new RuntimeException("containsValue optimistic (VClass)");
-
-        if (map.containsValue (null))
-            throw new RuntimeException("containsValue optimistic (null)");
-
-        map.put("a", null);
-        map.put("b", new VClass(42));
-
-        if (!map.containsValue (new VClass(42)))
-            throw new RuntimeException("containsValue pessimistic (VClass)");
 
         if (!map.containsValue (null))
             throw new RuntimeException("containsValue pessimistic (null)");
